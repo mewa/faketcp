@@ -9,8 +9,14 @@
 #define FTCP_SYN 0x1
 #define FTCP_ACK 0x2
 
+
+
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
+
+typedef struct ftcp_state {
+  
+} ftcp_state;
 
 typedef struct ftcp_ctl {
   uint8_t flags;
