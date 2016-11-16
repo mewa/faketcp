@@ -4,23 +4,22 @@
 #include <stdio.h>
 
 int main(int argc, char** argv) {
-  char* addr = argv[1];
-  short port = atoi(argv[2]);
+  short port = atoi(argv[1]);
   
   int socket = ftcp_socket(PF_INET);
-  sockaddr_in src_addr, dest_addr;
+  sockaddr_in addr;
 
-  memset((void*) &src_addr, 0, sizeof(sockaddr_in));
-  src_addr.sin_family = AF_INET;
-  inet_aton(addr, &src_addr.sin_addr);
-  src_addr.sin_port = htons(port);
+  memset((void*) &addr, 0, sizeof(sockaddr_in));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(port);
   
   socklen_t addrlen = sizeof(sockaddr);
 
-  if (bind(socket, (sockaddr*) &src_addr, addrlen) < 0)
+  if (ftcp_bind(socket, (sockaddr*) &addr, addrlen) < 0)
     perror("bind");
   
-  if (ftcp_accept(socket, (sockaddr*) &dest_addr, &addrlen) < 0)
+  if (ftcp_accept(socket, (sockaddr*) &addr, &addrlen) < 0)
     perror("accept");
   
   return 0;

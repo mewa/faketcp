@@ -19,6 +19,8 @@ typedef struct ftcp_ctl {
 
 int ftcp_socket(int domain);
 
+int ftcp_bind(int socket, sockaddr* addr, socklen_t addrlen);
+
 int ftcp_accept(int socket, sockaddr* addr, socklen_t* addrlen);
 
 int ftcp_connect(int socket, sockaddr* addr, socklen_t addrlen);

@@ -37,17 +37,23 @@ int main(int argc, char** argv) {
   dest_addr.sin_port = htons(port);
 
   socklen_t addr_size = sizeof(sockaddr);
-
+  //if (ftcp_bind(sock, (sockaddr*) &dest_addr, addr_size) < 0)
+  //perror("ftcp bind");
   if (ftcp_connect(sock, (sockaddr*) &dest_addr, addr_size) < 0)
     perror("ftcp connect");
+  else
+    printf("connected\n");
   char i = 0;
   while (1) {
     sprintf(buffer, "hello %d", i++);
     if (ftcp_write(sock, buffer, strlen(buffer)) < 0) {
-      printf("econnreset %d\n", errno == ECONNREFUSED);
       perror("send");
     } else
       printf("sent\n");
+    if (ftcp_read(sock, buffer, 11) > 0)
+      printf("read %s\n", buffer);
+    else
+      perror("ftcp_read");
     sleep(1);
   }
 }
