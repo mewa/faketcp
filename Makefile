@@ -1,15 +1,15 @@
 all: client server
 
 client:
-	gcc -g main.c faketcp.c -o ftcp
+	gcc -g -Wall client.c faketcp.c -o ftcp
 
 server:
-	gcc -g server.c faketcp.c -o fsvr
+	gcc -g -Wall server.c faketcp.c -o fsvr
 
 clean:
 	rm -rf ftcp fsvr *.dSYM *~ *#
 
-test:
+ctest:
 	./ftcp 127.0.0.1 8888
 
 stest:

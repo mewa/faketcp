@@ -37,8 +37,8 @@ int main(int argc, char** argv) {
   dest_addr.sin_port = htons(port);
 
   socklen_t addr_size = sizeof(sockaddr);
-  //if (ftcp_bind(sock, (sockaddr*) &dest_addr, addr_size) < 0)
-  //perror("ftcp bind");
+  if (ftcp_bind(sock, (sockaddr*) &src_addr, addr_size) < 0)
+    perror("ftcp bind");
   if (ftcp_connect(sock, (sockaddr*) &dest_addr, addr_size) < 0)
     perror("ftcp connect");
   else
