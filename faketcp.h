@@ -12,9 +12,15 @@
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
 
+typedef uint16_t ftcp_seq;
+
+ftcp_seq host_seq[1024];
+ftcp_seq client_seq[1024];
+
 typedef struct ftcp_ctl {
   uint8_t flags;
-  uint32_t token;
+  ftcp_seq host;
+  ftcp_seq client;
 } ftcp_ctl;
 
 int ftcp_socket(int domain);

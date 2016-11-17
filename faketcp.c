@@ -7,6 +7,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define DEBUG
 
@@ -24,79 +25,114 @@ int ftcp_accept(int socket, sockaddr* addr, socklen_t* addrlen) {
 #ifdef DEBUG
   printf("Awaiting connection\n");
 #endif
-  
+
+  // Receive SYN
   ftcp_ctl ctl;
+  memset(&ctl, 0, sizeof(ftcp_ctl));
   int ret = recvfrom(socket, &ctl, sizeof(ftcp_ctl), 0, addr, addrlen);
 
 #ifdef DEBUG
-  printf("%s:%d connected to server\n", inet_ntoa(((sockaddr_in*) addr)->sin_addr), ((sockaddr_in*) addr)->sin_port);
+  printf("<--%s:%d connected to server\n", inet_ntoa(((sockaddr_in*) addr)->sin_addr), ((sockaddr_in*) addr)->sin_port);
 #endif
   
   if (ret < 0)
     return ret;
-
-  /*
-    Just SYN, SYN+ACK = refresh
-   */
+  
   if (ctl.flags & FTCP_SYN && !(ctl.flags & FTCP_ACK)) {
-#ifdef DEBUG
-    printf("SYN\n");
-#endif
+    // Save host sequence
+    host_seq[socket] = rand();
+    // Save client sequence
+    client_seq[socket] = ctl.client;
     
-    ctl.flags = FTCP_ACK;
-    ctl.token = time(0);
-
 #ifdef DEBUG
-    printf("ACK token %d\n", ctl.token);
+    printf("<--%s:%d SYN token %d\n", inet_ntoa(((sockaddr_in*) addr)->sin_addr), ((sockaddr_in*) addr)->sin_port, client_seq[socket]);
 #endif
 
-    sockaddr_in svr_addr;
-    socklen_t svr_addrlen;
-    if (getsockname(socket, (sockaddr*) &svr_addr, &svr_addrlen) < 0)
-      perror("gsockname");
-
-#ifdef DEBUG
-    printf("%s:%d ack\n", inet_ntoa(((sockaddr_in*) addr)->sin_addr), ((sockaddr_in*) addr)->sin_port);
-#endif
+    // Send SYN-ACK
     
-    ret = bind(socket, (sockaddr*) addr, *addrlen);
+    ctl.flags |= FTCP_ACK;
+    // Put host sequence
+    ctl.host = host_seq[socket];
+    ctl.client = ++client_seq[socket];
+    
+    ret = connect(socket, (sockaddr*) addr, *addrlen);
     
     if (ret < 0)
       return ret;
 
-    //ret = sendto(socket, &ctl, sizeof(ftcp_ctl), 0, (sockaddr*) &svr_addr, svr_addrlen);
-    //ret = write(socket, &ctl, sizeof(ftcp_ctl));
+    ret = sendto(socket, &ctl, sizeof(ftcp_ctl), 0, (sockaddr*) &addr, *addrlen);
+
+#ifdef DEBUG
+    printf("-->%s:%d SYN-ACK token %d\n", inet_ntoa(((sockaddr_in*) addr)->sin_addr), ((sockaddr_in*) addr)->sin_port, host_seq[socket]);
+#endif
     
     if (ret < 0)
       return ret;
+
+    // Receive ACK
+    ret = recvfrom(socket, &ctl, sizeof(ftcp_ctl), 0, addr, addrlen);
+    
+    if (ret < 0)
+      return ret;
+
+    if ((ctl.flags & (FTCP_ACK | FTCP_SYN)) == FTCP_ACK) {
+      if (ctl.client == client_seq[socket] + 1) {
+#ifdef DEBUG
+	printf("%s:%d ACK token %d\n", inet_ntoa(((sockaddr_in*) addr)->sin_addr), ((sockaddr_in*) addr)->sin_port, client_seq[socket]);
+#endif
+	++client_seq[socket];
+      }
+    }
   }
   return 0;
 }
 
 int ftcp_connect(int socket, sockaddr* addr, socklen_t addrlen) {
-  int ret = ftcp_bind(socket, addr, addrlen);//connect(socket, addr, addrlen);
+  int ret = connect(socket, addr, addrlen);
   if (ret < 0)
     return ret;
   
   ftcp_ctl ctl;
   memset(&ctl, 0, sizeof(ftcp_ctl));
+
+  host_seq[socket] = rand();
+  
   ctl.flags |= FTCP_SYN;
+  ctl.client = host_seq[socket];
+  
   ret = write(socket, &ctl, sizeof(ftcp_ctl));
+
+#ifdef DEBUG
+  printf("-->%s:%d SYN token %d\n", inet_ntoa(((sockaddr_in*) addr)->sin_addr), ((sockaddr_in*) addr)->sin_port, host_seq[socket]);
+#endif
   
   if (ret < 0)
     return ret;
 
   ret = read(socket, &ctl, sizeof(ftcp_ctl));
+  
+  if (ret < 0)
+    return ret;
+
+#ifdef DEBUG
+  printf("<--%s:%d SYN-ACK token %d\n", inet_ntoa(((sockaddr_in*) addr)->sin_addr), ((sockaddr_in*) addr)->sin_port, host_seq[socket]);
+#endif
+  
 #ifdef DEBUG
   printf("ACK %d\n", ctl.flags & FTCP_ACK);
 #endif
-  fcntl(socket, F_SETFL, O_NONBLOCK);
 
   return ret;
 }
 
 int ftcp_write(int socket, void* data, size_t len) {
-  return write(socket, data, len);
+  int ret = write(socket, data, len);
+  ftcp_ctl ctl;
+  memset(&ctl, 0, sizeof(ftcp_ctl));
+  if (ret < 0)
+    return ret;
+  ret = read(socket, &ctl, sizeof(ftcp_ctl));
+  return ret;
 }
 
 int ftcp_read(int socket, void* data, size_t len) {
