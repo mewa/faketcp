@@ -8,17 +8,61 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <netdb.h>
+#include <fcntl.h>
+
+queue* conn_q = NULL;
 
 #define DEBUG
 
-int ftcp_socket(int domain) {
-  return socket(domain, SOCK_DGRAM, IPPROTO_UDP);
+int ftcp_socket() {
+  return socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 }
 
 int ftcp_bind(int socket, sockaddr* addr, socklen_t addrlen) {
   int v = 1;
   setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &v, sizeof(int));
   return bind(socket, addr, addrlen);
+}
+
+int ftcp_listen(int socket) {
+  queue* q = __ftcp_queue();
+
+  // listening must be non-blocking
+  int ret = fcntl(socket, F_SETFL, O_NONBLOCK);
+
+  ftcp_sck_ctl* conn = malloc(sizeof(ftcp_sck_ctl));
+  conn->socket = socket;
+  conn->type = FTCP_SCK_LISTEN;
+  conn->inc_q = queue_create();
+
+  // push connection to connection queue
+  queue_push(q, conn);
+
+  pthread_create(&conn->tid, NULL, (void*(*)(void*)) __ftcp_listen, conn);
+
+  return ret;
+}
+
+void* __ftcp_listen(ftcp_sck_ctl* sck_ctl) {
+  socklen_t addrlen;
+  sockaddr_in addr;
+
+  int ret = 1;
+
+  while (ret > 0) {
+    ftcp_conn_ctl* ctl = malloc(sizeof(ftcp_conn_ctl));
+    memset(ctl, 0, sizeof(ftcp_conn_ctl));
+
+    ret = recvfrom(sck_ctl->socket, ctl, sizeof(ftcp_conn_ctl), 0, &ctl->addr, &addrlen);
+
+    queue_push(sck_ctl->inc_q, ctl);
+
+#ifdef DEBUG
+    printf("<--[LISTEN]-- %s:%d connected to server\n", inet_ntoa(((sockaddr_in*) &addr)->sin_addr), ((sockaddr_in*) &addr)->sin_port);
+#endif
+  }
+  return NULL;
 }
 
 int ftcp_accept(int socket, sockaddr* addr, socklen_t* addrlen) {
@@ -137,4 +181,10 @@ int ftcp_write(int socket, void* data, size_t len) {
 
 int ftcp_read(int socket, void* data, size_t len) {
   return 0;
+}
+
+queue* __ftcp_queue()  {
+  if (conn_q)
+    conn_q = queue_create(NULL);
+  return conn_q;
 }
