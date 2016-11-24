@@ -18,6 +18,9 @@ int main(int argc, char** argv) {
 
   if (ftcp_bind(socket, (sockaddr*) &addr, addrlen) < 0)
     perror("bind");
+
+  if (ftcp_listen(socket) < 0)
+    perror("listen");
   
   if (ftcp_accept(socket, (sockaddr*) &addr, &addrlen) < 0)
     perror("accept");

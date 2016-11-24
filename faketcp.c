@@ -1,5 +1,4 @@
 #include "faketcp.h"
-
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -184,7 +183,7 @@ int ftcp_read(int socket, void* data, size_t len) {
 }
 
 queue* __ftcp_queue()  {
-  if (conn_q)
+  if (!conn_q)
     conn_q = queue_create(NULL);
   return conn_q;
 }
