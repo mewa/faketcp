@@ -19,6 +19,7 @@ void queue_push(queue* queue, void* item) {
     queue->head = next;
   }
   queue->tail = next;
+  ++queue->size;
 }
 
 void* queue_pop(queue* queue) {
@@ -29,6 +30,7 @@ void* queue_pop(queue* queue) {
     if (!head->next)
       queue->tail = NULL;
     free(head);
+    --queue->size;
     return item;
   }
   return NULL;

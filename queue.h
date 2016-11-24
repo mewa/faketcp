@@ -12,13 +12,13 @@ struct node_t {
   void* value;
 };
 
-typedef struct queue {
+struct queue {
   node_t* head;
   node_t* tail;
   size_t size;
-} queue;
+};
 
-queue* queue_create(void* head);
+queue* queue_create();
 
 void queue_push(queue* queue, void* item);
 
