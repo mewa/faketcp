@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include "queue.h"
 #include <pthread.h>
 
@@ -17,6 +18,7 @@
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
+typedef struct in_addr in_addr;
 
 typedef uint16_t ftcp_seq;
 
@@ -32,14 +34,7 @@ typedef struct ftcp_conn_ctl_data {
 typedef struct ftcp_conn_ctl {
   sockaddr_in addr;
   socklen_t addrlen;
-  union {
-    ftcp_conn_ctl_data data;
-    struct {
-      uint8_t flags;
-      ftcp_seq host;
-      ftcp_seq client;
-    };
-  };
+  ftcp_conn_ctl_data data;
 } ftcp_conn_ctl;
 
 typedef struct ftcp_sck_ctl {
@@ -65,4 +60,6 @@ int ftcp_write(int socket, void* data, size_t len);
 
 int ftcp_read(int socket, void* data, size_t len);
 
-queue* __ftcp_queue();
+queue* __ftcp_conn_queue();
+
+queue* __ftcp_sck_queue(int socket);
