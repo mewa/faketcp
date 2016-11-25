@@ -23,11 +23,22 @@ typedef uint16_t ftcp_seq;
 ftcp_seq host_seq[1024];
 ftcp_seq client_seq[1024];
 
-typedef struct ftcp_conn_ctl {
-  sockaddr addr;
+typedef struct ftcp_conn_ctl_data {
   uint8_t flags;
   ftcp_seq host;
   ftcp_seq client;
+} ftcp_conn_ctl_data;
+
+typedef struct ftcp_conn_ctl {
+  sockaddr_in addr;
+  union {
+    ftcp_conn_ctl_data data;
+    struct {
+      uint8_t flags;
+      ftcp_seq host;
+      ftcp_seq client;
+    };
+  };
 } ftcp_conn_ctl;
 
 typedef struct ftcp_sck_ctl {

@@ -1,10 +1,10 @@
 all: client server
 
 client:
-	gcc -g -Wall queue.c client.c faketcp.c -o ftcp
+	gcc -g -Wall -pthread queue.c client.c faketcp.c -o ftcp
 
 server:
-	gcc -g -Wall queue.c server.c faketcp.c -o fsvr
+	gcc -g -Wall -pthread queue.c server.c faketcp.c -o fsvr
 
 clean:
 	rm -rf ftcp fsvr *.dSYM *~ *#

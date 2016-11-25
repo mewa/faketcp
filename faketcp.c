@@ -44,7 +44,7 @@ int ftcp_listen(int socket) {
 }
 
 void* __ftcp_listen(ftcp_sck_ctl* sck_ctl) {
-  socklen_t addrlen;
+  socklen_t addrlen = sizeof(sockaddr_in);
   sockaddr_in addr;
 
   int ret = 1;
@@ -53,7 +53,7 @@ void* __ftcp_listen(ftcp_sck_ctl* sck_ctl) {
     ftcp_conn_ctl* ctl = malloc(sizeof(ftcp_conn_ctl));
     memset(ctl, 0, sizeof(ftcp_conn_ctl));
 
-    ret = recvfrom(sck_ctl->socket, ctl, sizeof(ftcp_conn_ctl), 0, &ctl->addr, &addrlen);
+    ret = recvfrom(sck_ctl->socket, &ctl->data, sizeof(ftcp_conn_ctl_data), 0, (sockaddr*) &ctl->addr, &addrlen);
 
     queue_push(sck_ctl->inc_q, ctl);
 
@@ -72,7 +72,7 @@ int ftcp_accept(int socket, sockaddr* addr, socklen_t* addrlen) {
   // Receive SYN
   ftcp_conn_ctl ctl;
   memset(&ctl, 0, sizeof(ftcp_conn_ctl));
-  int ret = recvfrom(socket, &ctl, sizeof(ftcp_conn_ctl), 0, addr, addrlen);
+  int ret = recvfrom(socket, &ctl, sizeof(ftcp_conn_ctl_data), 0, addr, addrlen);
 
 #ifdef DEBUG
   printf("<--%s:%d connected to server\n", inet_ntoa(((sockaddr_in*) addr)->sin_addr), ((sockaddr_in*) addr)->sin_port);
@@ -103,7 +103,7 @@ int ftcp_accept(int socket, sockaddr* addr, socklen_t* addrlen) {
     if (ret < 0)
       return ret;
 
-    ret = sendto(socket, &ctl, sizeof(ftcp_conn_ctl), 0, (sockaddr*) &addr, *addrlen);
+    ret = sendto(socket, &ctl, sizeof(ftcp_conn_ctl_data), 0, (sockaddr*) &addr, *addrlen);
 
 #ifdef DEBUG
     printf("-->%s:%d SYN-ACK token %d\n", inet_ntoa(((sockaddr_in*) addr)->sin_addr), ((sockaddr_in*) addr)->sin_port, host_seq[socket]);
@@ -113,7 +113,7 @@ int ftcp_accept(int socket, sockaddr* addr, socklen_t* addrlen) {
       return ret;
 
     // Receive ACK
-    ret = recvfrom(socket, &ctl, sizeof(ftcp_conn_ctl), 0, addr, addrlen);
+    ret = recvfrom(socket, &ctl, sizeof(ftcp_conn_ctl_data), 0, addr, addrlen);
     
     if (ret < 0)
       return ret;
@@ -143,7 +143,7 @@ int ftcp_connect(int socket, sockaddr* addr, socklen_t addrlen) {
   ctl.flags |= FTCP_SYN;
   ctl.client = host_seq[socket];
   
-  ret = write(socket, &ctl, sizeof(ftcp_conn_ctl));
+  ret = write(socket, &ctl, sizeof(ftcp_conn_ctl_data));
 
 #ifdef DEBUG
   printf("-->%s:%d SYN token %d\n", inet_ntoa(((sockaddr_in*) addr)->sin_addr), ((sockaddr_in*) addr)->sin_port, host_seq[socket]);
@@ -152,7 +152,7 @@ int ftcp_connect(int socket, sockaddr* addr, socklen_t addrlen) {
   if (ret < 0)
     return ret;
 
-  ret = read(socket, &ctl, sizeof(ftcp_conn_ctl));
+  ret = read(socket, &ctl, sizeof(ftcp_conn_ctl_data));
   
   if (ret < 0)
     return ret;
@@ -174,7 +174,7 @@ int ftcp_write(int socket, void* data, size_t len) {
   memset(&ctl, 0, sizeof(ftcp_conn_ctl));
   if (ret < 0)
     return ret;
-  ret = read(socket, &ctl, sizeof(ftcp_conn_ctl));
+  ret = read(socket, &ctl, sizeof(ftcp_conn_ctl_data));
   return ret;
 }
 
