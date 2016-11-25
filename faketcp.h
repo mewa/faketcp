@@ -31,6 +31,7 @@ typedef struct ftcp_conn_ctl_data {
 
 typedef struct ftcp_conn_ctl {
   sockaddr_in addr;
+  socklen_t addrlen;
   union {
     ftcp_conn_ctl_data data;
     struct {

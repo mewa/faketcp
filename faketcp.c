@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <netdb.h>
 #include <fcntl.h>
+#include <errno.h>
 
 queue* conn_q = NULL;
 
@@ -44,23 +45,31 @@ int ftcp_listen(int socket) {
 }
 
 void* __ftcp_listen(ftcp_sck_ctl* sck_ctl) {
-  socklen_t addrlen = sizeof(sockaddr_in);
-  sockaddr_in addr;
+  int ret = 0;
+  int err = EAGAIN;
+  ftcp_conn_ctl* ctl = malloc(sizeof(ftcp_conn_ctl));
 
-  int ret = 1;
+  while (ret > 0 || err == EAGAIN || err == EWOULDBLOCK) {
+    ctl->addrlen = sizeof(ctl->addr);
+    
+    ret = recvfrom(sck_ctl->socket, &ctl->data, sizeof(ftcp_conn_ctl_data), 0, (sockaddr*) &ctl->addr, &ctl->addrlen);
+    err = errno;
 
-  while (ret > 0) {
-    ftcp_conn_ctl* ctl = malloc(sizeof(ftcp_conn_ctl));
-    memset(ctl, 0, sizeof(ftcp_conn_ctl));
-
-    ret = recvfrom(sck_ctl->socket, &ctl->data, sizeof(ftcp_conn_ctl_data), 0, (sockaddr*) &ctl->addr, &addrlen);
-
-    queue_push(sck_ctl->inc_q, ctl);
+    if (ret > 0) {
+      queue_push(sck_ctl->inc_q, ctl);
 
 #ifdef DEBUG
-    printf("<--[LISTEN]-- %s:%d connected to server\n", inet_ntoa(((sockaddr_in*) &addr)->sin_addr), ((sockaddr_in*) &addr)->sin_port);
+      printf("<--[LISTEN]-- %s:%d connected to server\n", inet_ntoa(ctl->addr.sin_addr), ntohs(ctl->addr.sin_port));
 #endif
+      
+      ctl = malloc(sizeof(ftcp_conn_ctl));
+      memset(ctl, 0, sizeof(ftcp_conn_ctl));
+    }
+
+    usleep(10000);
   }
+  free(ctl);
+  perror("__ftcp_listen");
   return NULL;
 }
 
