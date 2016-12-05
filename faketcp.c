@@ -27,7 +27,7 @@ int ftcp_listen(int socket) {
   queue* q = __ftcp_conn_queue();
   
   // listening must be non-blocking
-  int ret = 0;// = fcntl(socket, F_SETFL, O_NONBLOCK)
+  int ret = fcntl(socket, F_SETFL, O_NONBLOCK);
   ftcp_sck_ctl* conn = malloc(sizeof(ftcp_sck_ctl));  
   conn->socket = socket;
   conn->type = FTCP_SCK_LISTEN;
