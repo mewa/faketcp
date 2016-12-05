@@ -36,6 +36,15 @@ void* queue_pop(queue* queue) {
   return NULL;
 }
 
+void* queue_peek(queue* queue) {
+  node_t* head = queue->head;
+  if (head) {
+    void* item = head->value;
+    return item;
+  }
+  return NULL;
+}
+
 
 void queue_destroy(queue* queue) {
   node_t* next = queue->head;

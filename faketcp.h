@@ -24,11 +24,12 @@ typedef uint16_t ftcp_seq;
 
 ftcp_seq host_seq[1024];
 ftcp_seq client_seq[1024];
+int sockets[1024];
 
 typedef struct ftcp_conn_ctl_data {
   uint8_t flags;
-  ftcp_seq host;
-  ftcp_seq client;
+  ftcp_seq my_seq;
+  ftcp_seq other_seq;
 } ftcp_conn_ctl_data;
 
 typedef struct ftcp_conn_ctl {
@@ -58,8 +59,14 @@ int ftcp_connect(int socket, sockaddr* addr, socklen_t addrlen);
 
 int ftcp_write(int socket, void* data, size_t len);
 
+int __ftcp_write_ctl(int socket, ftcp_conn_ctl* ctl);
+
 int ftcp_read(int socket, void* data, size_t len);
+
+int __ftcp_read_ctl(int socket, ftcp_conn_ctl* ctl);
 
 queue* __ftcp_conn_queue();
 
 queue* __ftcp_sck_queue(int socket);
+
+int isClient(int socket);

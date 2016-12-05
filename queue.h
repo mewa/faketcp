@@ -24,6 +24,8 @@ void queue_push(queue* queue, void* item);
 
 void* queue_pop(queue* queue);
 
+void* queue_peek(queue* queue);
+
 void queue_destroy(queue* queue);
 
 
