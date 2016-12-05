@@ -44,16 +44,17 @@ int main(int argc, char** argv) {
   else
     printf("connected\n");
   char i = 0;
+  int ret;
   while (1) {
+    printf("\nwait-write\n");
     sprintf(buffer, "hello %d", i++);
-    if (ftcp_write(sock, buffer, strlen(buffer)) < 0) {
+    if ((ret = ftcp_write(sock, buffer, strlen(buffer))) < 0) {
       perror("send");
     } else
       printf("sent\n");
-    if (ftcp_read(sock, buffer, 11) > 0)
-      printf("read %s\n", buffer);
-    else
-      perror("ftcp_read");
+    printf("\nwait-read\n");
+    if (ftcp_read(sock, buffer, ret) < 0)
+      perror("rread");
     sleep(1);
   }
 }

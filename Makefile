@@ -4,7 +4,7 @@ client:
 	gcc -g -Wall -pthread queue.c client.c faketcp.c -o ftcp
 
 server:
-	gcc -g -Wall -pthread queue.c server.c faketcp.c -o fsvr
+	gcc -g -DFTCP_DEBUG=1 -Wall -pthread queue.c server.c faketcp.c -o fsvr
 
 clean:
 	rm -rf ftcp fsvr *.dSYM *~ *#

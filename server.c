@@ -2,6 +2,22 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdio.h>
+#include <pthread.h>
+
+void* rdloop(int socket) {
+  char buffer[16];
+  buffer[15] = 0;
+  int ret = 1;
+  while (ret > 0) {
+    ret = ftcp_read(socket, buffer, sizeof(buffer) - 1);
+    if (ret > 0) {
+      write(1, buffer, ret);
+      printf("\nwriting to %d\n", socket);
+      ftcp_write(socket, buffer, ret);
+    }
+  }
+  return NULL;
+}
 
 int main(int argc, char** argv) {
   short port = atoi(argv[1]);
@@ -24,7 +40,8 @@ int main(int argc, char** argv) {
 
   int sck;
   while ((sck = ftcp_accept(socket, (sockaddr*) &cl_addr, &addrlen)) > 0) {
-    
+    pthread_t id;
+    pthread_create(&id, NULL, (void* (*)(void*)) rdloop, (void*) (size_t) sck);
   }
   if (sck < 0)
     perror("accept");
