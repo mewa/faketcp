@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
+/*@null@*/
 queue* conn_q = NULL;
 
 int ftcp_socket() {
@@ -19,22 +20,28 @@ int ftcp_socket() {
 
 int ftcp_bind(int socket, sockaddr* addr, socklen_t addrlen) {
   int v = 1;
-  setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &v, sizeof(int));
+  v = setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &v, (socklen_t) sizeof(int));
+  if (v < 0)
+    return v;
   return bind(socket, addr, addrlen);
 }
 
 int ftcp_listen(int socket) {
   queue* q = __ftcp_conn_queue();
   
-  // listening must be non-blocking
+  /* listening must be non-blocking */
   int ret = fcntl(socket, F_SETFL, O_NONBLOCK);
-  ftcp_sck_ctl* conn = malloc(sizeof(ftcp_sck_ctl));  
-  conn->socket = socket;
-  conn->type = FTCP_SCK_LISTEN;
-  conn->inc_q = queue_create();
+  ftcp_sck_ctl* conn = malloc(sizeof(ftcp_sck_ctl));
+  if (conn) {
+    conn->socket = socket;
+    conn->type = FTCP_SCK_LISTEN;
+    conn->inc_q = queue_create();
 
-  // push connection to connection queue
-  queue_push(q, conn);
+    /* push connection to connection queue */
+    queue_push(q, conn);
+  } else {
+    return EXIT_FAILURE;
+  }
 
 #ifdef FTCP_DEBUG
   printf("[LISTEN] Started listening on socket %d\n", socket);
@@ -45,6 +52,7 @@ int ftcp_listen(int socket) {
   return ret;
 }
 
+/*@null@*/
 void* __ftcp_listen(ftcp_sck_ctl* sck_ctl) {
   int ret = 0;
   int err = EAGAIN;
@@ -67,7 +75,7 @@ void* __ftcp_listen(ftcp_sck_ctl* sck_ctl) {
       memset(ctl, 0, sizeof(ftcp_conn_ctl));
     }
 
-    usleep(10000);
+    (void) usleep(10000);
   }
   free(ctl);
   perror("__ftcp_listen");
@@ -82,14 +90,14 @@ int ftcp_accept(int socket, sockaddr* addr, socklen_t* addrlen) {
   if (!sck_q)
     return -0xb4d;
   
-  // Receive SYN from queue
+  /* Receive SYN from queue */
   ftcp_conn_ctl* ctl = queue_pop(sck_q);
   while (!ctl) {
     ctl = queue_pop(sck_q);
     sleep(1);
   }
 
-  // swap sequences
+  /* swap sequences */
   ftcp_seq seq = ctl->data.my_seq;
   ctl->data.my_seq = ctl->data.other_seq;
   ctl->data.other_seq = seq;
@@ -104,23 +112,23 @@ int ftcp_accept(int socket, sockaddr* addr, socklen_t* addrlen) {
   sockets[conn_sck] = FTCP_SCK_LISTEN;
   
   if (ctl->data.flags & FTCP_SYN && !(ctl->data.flags & FTCP_ACK)) {
-    // Save host sequence
+    /* Save host sequence */
     host_seq[conn_sck] = rand();
-    // Save client sequence
+    /* Save client sequence */
     client_seq[conn_sck] = ctl->data.other_seq;
     
 #ifdef FTCP_DEBUG
     printf("<--[ACCEPT]-- %s:%d SYN token [%d; %d]\n", inet_ntoa(((sockaddr_in*) &ctl->addr)->sin_addr), ntohs(((sockaddr_in*) &ctl->addr)->sin_port), ctl->data.my_seq, ctl->data.other_seq);
 #endif
     
-    // Send SYN-ACK
+    /* Send SYN-ACK */
     
     ctl->data.flags |= FTCP_ACK;
-    // Put host sequence
+    /* Put host sequence */
     ctl->data.my_seq = host_seq[conn_sck];
     ctl->data.other_seq = ++client_seq[conn_sck];
 
-    // get server address
+    /* get server address */
     sockaddr_in addr_in;
     getsockname(socket, (sockaddr*) &addr_in, &ctl->addrlen);
     inet_aton("127.0.0.1", &addr_in.sin_addr);
@@ -145,10 +153,10 @@ int ftcp_accept(int socket, sockaddr* addr, socklen_t* addrlen) {
 #endif
     memset(&ctl->data.flags, 0, sizeof(ctl->data.flags));
 
-    // Receive ACK
+    /* Receive ACK */
     ret = recv(conn_sck, &ctl->data, sizeof(ftcp_conn_ctl_data), 0);
 
-    // swap sequences
+    /* swap sequences */
     seq = ctl->data.my_seq;
     ctl->data.my_seq = ctl->data.other_seq;
     ctl->data.other_seq = seq;
@@ -196,7 +204,7 @@ int ftcp_connect(int socket, sockaddr* addr, socklen_t addrlen) {
 
   ret = recv(socket, &ctl.data, sizeof(ftcp_conn_ctl_data), 0);
 
-  // swap sequences
+  /* swap sequences */
   ftcp_seq seq = ctl.data.my_seq;
   ctl.data.my_seq = ctl.data.other_seq;
   ctl.data.other_seq = seq;
@@ -236,6 +244,8 @@ int ftcp_write(int socket, void* data, size_t len) {
       continue;
     
     bytesread = write(socket, data, len);
+    if (bytesread < 0)
+      return bytesread;
 
 #ifdef FTCP_DEBUG
     if (ctl.data.my_seq != host_seq[socket]) {
@@ -299,10 +309,10 @@ int __ftcp_write_ctl(int socket, ftcp_conn_ctl* ctl) {
 int __ftcp_read_ctl(int socket, ftcp_conn_ctl* ctl) {
   int ret = read(socket, &ctl->data, sizeof(ctl->data));
 
-    // swap sequences
-    ftcp_seq seq = ctl->data.my_seq;
-    ctl->data.my_seq = ctl->data.other_seq;
-    ctl->data.other_seq = seq;
+  /* swap sequences */
+  ftcp_seq seq = ctl->data.my_seq;
+  ctl->data.my_seq = ctl->data.other_seq;
+  ctl->data.other_seq = seq;
   
 #ifdef FTCP_DEBUG
   printf("--[READ]--> ACK %d ret %d [%d; %d]\n", ctl->data.flags & FTCP_ACK, ret, ctl->data.my_seq, ctl->data.other_seq);

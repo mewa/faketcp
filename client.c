@@ -12,7 +12,7 @@
 char buffer[12];
 
 int main(int argc, char** argv) {
-  buffer[11] = 0;
+  buffer[11] = '\0';
 
   char* addr = argv[1];
   short port = atoi(argv[2]);
@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
   
   if (sock < 0) {
     perror("sock");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   sockaddr_in src_addr, dest_addr;
 

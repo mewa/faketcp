@@ -1,10 +1,10 @@
 all: client server
 
 client:
-	gcc -g -Wall -pthread queue.c client.c faketcp.c -o ftcp
+	gcc -std=gnu99 -g -pedantic -Wall -pthread queue.c client.c faketcp.c -o ftcp
 
 server:
-	gcc -g -DFTCP_DEBUG=1 -Wall -pthread queue.c server.c faketcp.c -o fsvr
+	gcc -std=gnu99 -g -pedantic -DFTCP_DEBUG=1 -Wall -pthread queue.c server.c faketcp.c -o fsvr
 
 clean:
 	rm -rf ftcp fsvr *.dSYM *~ *#
@@ -14,3 +14,6 @@ ctest:
 
 stest:
 	./fsvr 8888
+
+check:
+	splint -warnposix +charint -unrecog faketcp.c faketcp.h
